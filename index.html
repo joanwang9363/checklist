@@ -12,11 +12,8 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <!-- Babel Standalone (支援瀏覽器即時編譯 JSX) -->
+  <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
@@ -32,176 +29,197 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // --- 資料型別與常模 ---
-    const DESTINATIONS = [
-      { id: 'Japan', name: '日本 (東京/關西/沖繩)', tempMin: 12, tempMax: 20, rain: 25 },
-      { id: 'Bali', name: '印尼 (峇里島/雅加達)', tempMin: 24, tempMax: 31, rain: 40 },
-      { id: 'Europe', name: '歐洲申根區 (法/義/奧/捷)', tempMin: 8, tempMax: 16, rain: 35 },
-      { id: 'USA', name: '美國 / 加拿大', tempMin: 10, tempMax: 18, rain: 20 },
-      { id: 'Korea', name: '韓國 (首爾/釜山)', tempMin: 9, tempMax: 19, rain: 20 },
-      { id: 'Other', name: '其他海外國家', tempMin: 15, tempMax: 24, rain: 30 }
-    ];
+    // 氣候矩陣：依據目的地與月份動態估計
+    function getClimateEstimation(destination, dateStr) {
+      const month = dateStr ? new Date(dateStr).getMonth() + 1 : 4; // 預設 4 月
+      
+      if (destination === 'Japan') {
+        if ([12, 1, 2].includes(month)) return { tempMin: 2, tempMax: 10, rain: 20, desc: '冬季寒冷乾燥，需厚外套與保暖配件' };
+        if ([3, 4, 5].includes(month)) return { tempMin: 11, tempMax: 19, rain: 30, desc: '春季舒適微涼，早晚溫差大，備洋蔥式薄外套' };
+        if ([6, 7, 8].includes(month)) return { tempMin: 23, tempMax: 32, rain: 50, desc: '夏季炎熱多雨，備透氣涼爽短袖與折傘' };
+        return { tempMin: 13, tempMax: 21, rain: 25, desc: '秋季涼爽宜人，適合舒適長褲與輕便罩衫' };
+      }
+      
+      if (destination === 'Bali') {
+        if (month >= 4 && month <= 10) return { tempMin: 24, tempMax: 31, rain: 15, desc: '峇里島乾季，陽光充沛微風涼爽，注意高強度防曬' };
+        return { tempMin: 25, tempMax: 32, rain: 60, desc: '峇里島雨季，午後多熱帶陣雨，備防潑水鞋履與輕便雨具' };
+      }
 
-    function calculateLuggageItems(trip) {
+      if (destination === 'Europe') {
+        if ([11, 12, 1, 2, 3].includes(month)) return { tempMin: 0, tempMax: 8, rain: 35, desc: '歐洲秋冬寒冷，務必備發熱衣、羊毛披肩與保暖大衣' };
+        if ([4, 5, 9, 10].includes(month)) return { tempMin: 8, tempMax: 18, rain: 30, desc: '春秋季舒爽微涼，日夜溫差明顯，適合風衣與層次穿搭' };
+        return { tempMin: 17, tempMax: 28, rain: 25, desc: '夏季乾燥日照長，備透氣棉麻服裝與墨鏡' };
+      }
+
+      if (destination === 'Korea') {
+        if ([12, 1, 2].includes(month)) return { tempMin: -6, tempMax: 3, rain: 15, desc: '首爾寒冬乾燥凍冷，長版羽絨與保濕補水必備' };
+        if ([3, 4, 5].includes(month)) return { tempMin: 7, tempMax: 18, rain: 25, desc: '春季微涼花季，備防風外套與針織上衣' };
+        if ([6, 7, 8].includes(month)) return { tempMin: 22, tempMax: 30, rain: 55, desc: '夏季悶熱多暴雨，建議攜帶輕便防水涼鞋' };
+        return { tempMin: 9, tempMax: 20, rain: 20, desc: '秋高氣爽楓葉季，早晚涼意明顯，適合西裝外套與長褲' };
+      }
+
+      return { tempMin: 18, tempMax: 26, rain: 30, desc: '海外通用氣候估計，建議隨身攜帶輕薄罩衫' };
+    }
+
+    // 核心純函式：依據行程參數計算行李清單
+    function generateLuggageItems(trip) {
       const items = [];
-      const dest = DESTINATIONS.find(d => d.id === trip.destination) || DESTINATIONS[0];
-      const pax = trip.travelers || 1;
+      const climate = getClimateEstimation(trip.destination, trip.startDate);
 
-      // 1. 必備文件 (強制隨身)
+      // 1. 各國必備入境文件（強制隨身）
       items.push({
         id: 'doc-passport',
-        name: `護照正本 (效期 6 個月以上) × ${pax} 份`,
+        name: '護照正本 (有效期限 6 個月以上)',
         type: 'carry_on',
-        category: '必備文件',
-        quantity: pax,
+        category: '必備證件',
+        quantity: 1,
         confirmed: false,
-        dueTiming: '出發前 1~2 個月',
+        dueTiming: '出發前 1~2 個月檢查換發',
         urgency: 'high',
-        note: '登機必備，不可托運'
+        note: '登機必備，務必放隨身小包，不可托運'
       });
 
       items.push({
         id: 'doc-tickets',
-        name: '電子機票行程單 & 飯店離線憑證',
+        name: '電子機票行程單 & 住宿訂房離線憑證',
         type: 'carry_on',
-        category: '必備文件',
+        category: '必備證件',
         quantity: 1,
         confirmed: false,
         dueTiming: '出發前 24~72 小時',
         urgency: 'low',
-        note: '建議下載手機離線 PDF 並列印一份'
+        note: '存入手機 PDF 並建議備一份紙本'
       });
 
       if (trip.destination === 'Japan') {
         items.push({
           id: 'doc-vjw',
-          name: 'Visit Japan Web (VJW) 入境申報 QR 截圖',
+          name: 'Visit Japan Web (VJW) 入境手續 QR 截圖',
           type: 'carry_on',
-          category: '必備文件',
+          category: '必備證件',
           quantity: 1,
           confirmed: false,
           dueTiming: '出發前 24~48 小時',
           urgency: 'low',
-          note: '填寫海關與檢疫資訊並截圖保存'
+          note: '填好海關申報與檢疫，截圖離線備查'
         });
       } else if (trip.destination === 'Bali') {
         items.push({
           id: 'doc-bali-voa',
-          name: '印尼電子落地簽 (e-VoA) & 觀光稅繳納憑證',
+          name: '印尼電子落地簽 (e-VoA) & 峇里島觀光稅憑證',
           type: 'carry_on',
-          category: '必備文件',
+          category: '必備證件',
           quantity: 1,
           confirmed: false,
-          dueTiming: '出發前 3~7 天',
+          dueTiming: '出發前 3~7 天線上申辦',
           urgency: 'medium',
-          note: '線上先辦可節省入境排隊時間'
+          note: '線上先繳可走快速通關，節省排隊時間'
         });
         items.push({
           id: 'doc-bali-ecd',
           name: '印尼 ECD 電子海關申報 QR 截圖',
           type: 'carry_on',
-          category: '必備文件',
+          category: '必備證件',
           quantity: 1,
           confirmed: false,
-          dueTiming: '起飛前 3 天內',
+          dueTiming: '起飛前 3 天內線上填報',
           urgency: 'low',
-          note: '每戶填寫一份即可'
+          note: '抵達前線上填妥，出關掃描即可'
         });
       } else if (trip.destination === 'Europe') {
         items.push({
-          id: 'doc-schengen-ins',
+          id: 'doc-schengen',
           name: '申根醫療保險英文投保證明 (保額 3 萬歐元)',
           type: 'carry_on',
-          category: '必備文件',
-          quantity: pax,
+          category: '必備證件',
+          quantity: 1,
           confirmed: false,
-          dueTiming: '出發前 2~3 週',
+          dueTiming: '出發前 2~3 週向保險公司申請',
           urgency: 'medium',
-          note: '海關抽查必備，請備妥英文紙本'
-        });
-      } else if (trip.destination === 'USA') {
-        items.push({
-          id: 'doc-esta',
-          name: '美加 ESTA / eTA 電子授權核准憑證',
-          type: 'carry_on',
-          category: '必備文件',
-          quantity: pax,
-          confirmed: false,
-          dueTiming: '出發前至少 72 小時',
-          urgency: 'high',
-          note: '審核需工作天，務必提早完成'
+          note: '歐洲海關抽檢必備，列印英文紙本隨身帶'
         });
       }
 
-      // 2. 衣著件數依天數與洗衣計算
+      // 2. 衣著件數純函式推算（依天數與洗衣設定）
       const effectiveDays = trip.laundry === 'everyday' ? 2 : trip.laundry === 'midway' ? Math.ceil(trip.days / 2) + 1 : trip.days;
       
       items.push({
         id: 'wear-top',
-        name: '舒適日常百搭上衣',
+        name: '百搭顯瘦上衣 / 親膚針織 / 襯衫',
         type: 'checked',
-        category: '服飾鞋包',
+        category: '衣物鞋包',
         quantity: Math.min(effectiveDays, 6),
         confirmed: false
       });
       items.push({
         id: 'wear-bottom',
-        name: '高腰西裝寬褲 / 針織長裙 / 下身',
+        name: '垂墜高腰西裝寬褲 / 針織長裙 / 下身',
         type: 'checked',
-        category: '服飾鞋包',
+        category: '衣物鞋包',
         quantity: Math.max(2, Math.ceil(effectiveDays / 2)),
         confirmed: false
       });
       items.push({
         id: 'wear-underwear',
-        name: '親膚內著與貼身衣物組',
+        name: '無痕親膚內衣褲組',
         type: 'checked',
-        category: '服飾鞋包',
+        category: '衣物鞋包',
         quantity: effectiveDays + 1,
         confirmed: false
       });
       items.push({
         id: 'wear-shoes',
-        name: '漫步好走球鞋 / 瑪莉珍鞋 (穿一備一)',
+        name: '好走漫步球鞋 / 舒適瑪莉珍鞋 (穿一備一)',
         type: 'checked',
-        category: '服飾鞋包',
+        category: '衣物鞋包',
         quantity: 2,
         confirmed: false
       });
 
-      if (dest.tempMin < 15 || trip.coldTolerance === 'cold') {
+      // 氣候外套判斷
+      if (climate.tempMin < 16) {
         items.push({
           id: 'wear-outer',
-          name: '親膚保暖外套 / 防風洋蔥層',
+          name: '保暖外套 / 羊絨溫柔披肩',
           type: 'carry_on',
-          category: '服飾鞋包',
+          category: '衣物鞋包',
           quantity: 1,
           confirmed: false,
-          note: '機艙涼冷，建議隨身攜帶'
+          note: '早晚偏涼或機艙抗寒，建議隨身攜帶'
+        });
+      } else {
+        items.push({
+          id: 'wear-light-outer',
+          name: '輕薄透氣防曬罩衫 / 冷氣房薄開衫',
+          type: 'carry_on',
+          category: '衣物鞋包',
+          quantity: 1,
+          confirmed: false,
+          note: '防強烈日曬與室內強冷氣'
         });
       }
 
-      // 3. 護理美妝與保養
+      // 3. 美妝、保養與個人護理
       items.push({
         id: 'care-mask',
-        name: '高保濕修護面膜 (高空機艙抗乾燥)',
+        name: '高保濕深層修護面膜 (高空機艙抗乾荒)',
         type: 'carry_on',
         category: '美妝護理',
         quantity: 2,
         confirmed: false,
-        note: '單片液體需符合隨身 100ml 規範'
+        note: '隨身液體需符合單件 100ml 內夾鏈袋規範'
       });
       items.push({
-        id: 'care-skincare',
-        name: '旅行分裝保養乳液與美妝包',
+        id: 'care-beauty',
+        name: '旅行分裝保養品 & 日常美妝包',
         type: 'checked',
         category: '美妝護理',
         quantity: 1,
         confirmed: false
       });
       items.push({
-        id: 'care-hygiene',
-        name: '生理備品 / 隨身衛生棉包',
+        id: 'care-sanitary',
+        name: '生理用品應急備品 / 隨身護墊包',
         type: 'carry_on',
         category: '美妝護理',
         quantity: 1,
@@ -209,27 +227,27 @@
       });
       items.push({
         id: 'care-hair',
-        name: '整髮離子夾 / 整髮器 (雙電壓)',
+        name: '整髮離子夾 / 造型電棒 (雙電壓)',
         type: 'checked',
         category: '美妝護理',
         quantity: 1,
         confirmed: false,
-        note: '插電式放托運；充電鋰電池式請隨身'
+        note: '插電式放托運；若為內建鋰電池充電款請隨身'
       });
 
-      // 4. 3C 與日常隨身
+      // 4. 3C 與隨身電器
       items.push({
         id: 'tech-powerbank',
-        name: '行動電源 (限隨身，禁止托運)',
+        name: '行動電源 (限隨身攜帶，嚴禁托運)',
         type: 'carry_on',
         category: '3C 配件',
         quantity: 1,
         confirmed: false,
-        note: '嚴禁放入托運行李箱'
+        note: '航空法規限制，必須放隨身包包'
       });
       items.push({
         id: 'tech-adapter',
-        name: '萬國轉接插頭與充電線組',
+        name: '萬國轉接頭 & 快速充電線組',
         type: 'carry_on',
         category: '3C 配件',
         quantity: 1,
@@ -239,84 +257,107 @@
       return items;
     }
 
-    function mergeLuggageListsSafely(existing, incoming) {
+    // 安全合併演算法：保留已確認的勾選狀態
+    function mergeSafely(existingItems, freshItems) {
       const merged = [];
-      const incomingMap = new Map(incoming.map(item => [item.id, item]));
+      const freshMap = new Map(freshItems.map(item => [item.id, item]));
 
-      for (const oldItem of existing) {
-        if (incomingMap.has(oldItem.id)) {
-          const fresh = incomingMap.get(oldItem.id);
+      // 先處理舊的項目，保留勾選狀態與數量
+      for (const old of existingItems) {
+        if (old.isCustom) {
+          merged.push(old); // 保留使用者的自訂物品
+        } else if (freshMap.has(old.id)) {
+          const fresh = freshMap.get(old.id);
           merged.push({
             ...fresh,
-            confirmed: oldItem.confirmed,
-            quantity: oldItem.quantity
+            confirmed: old.confirmed,
+            quantity: old.quantity
           });
-          incomingMap.delete(oldItem.id);
-        } else {
-          merged.push(oldItem);
+          freshMap.delete(old.id);
         }
       }
 
-      for (const newItem of incomingMap.values()) {
-        merged.push(newItem);
+      // 加入新條件下產生的新項目（如新的簽證文件或外套）
+      for (const remaining of freshMap.values()) {
+        merged.push(remaining);
       }
+
       return merged;
     }
 
-    // --- 主介面元件 ---
     function App() {
-      const [trip, setTrip] = useState({
-        destination: 'Japan',
+      // 預設旅行表單狀態
+      const [form, setForm] = useState({
+        destination: 'Bali',
+        startDate: '2027-04-05',
         days: 5,
-        travelers: 2,
-        coldTolerance: 'cold',
         laundry: 'none'
       });
 
+      // 真正用於生成清單的當前狀態
+      const [activeTrip, setActiveTrip] = useState(form);
       const [items, setItems] = useState([]);
       const [activeTab, setActiveTab] = useState('all');
       const [newItemName, setNewItemName] = useState('');
       const [newItemType, setNewItemType] = useState('checked');
 
-      // 初始化或變更時安全合併
+      // 初始化載入
       useEffect(() => {
-        const fresh = calculateLuggageItems(trip);
-        setItems(prev => {
-          if (prev.length === 0) {
-            const saved = localStorage.getItem('joan_luggage_state');
-            if (saved) {
-              try { return JSON.parse(saved); } catch (e) {}
+        const saved = localStorage.getItem('joan_saved_luggage_v2');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed.trip && parsed.items) {
+              setForm(parsed.trip);
+              setActiveTrip(parsed.trip);
+              setItems(parsed.items);
+              return;
             }
-            return fresh;
-          }
-          return mergeLuggageListsSafely(prev, fresh);
-        });
-      }, [trip]);
-
-      // 自動儲存到 LocalStorage
-      useEffect(() => {
-        if (items.length > 0) {
-          localStorage.setItem('joan_luggage_state', JSON.stringify(items));
+          } catch (e) {}
         }
-      }, [items]);
+        // 若無舊紀錄，依預設值生成
+        const initialItems = generateLuggageItems(form);
+        setItems(initialItems);
+      }, []);
 
+      // 點擊「重新計算建議」按鈕時執行更新
+      const handleApplyChanges = (e) => {
+        e.preventDefault();
+        setActiveTrip(form);
+        const fresh = generateLuggageItems(form);
+        const merged = mergeSafely(items, fresh);
+        setItems(merged);
+        localStorage.setItem('joan_saved_luggage_v2', JSON.stringify({ trip: form, items: merged }));
+      };
+
+      // 勾選切換
       const toggleCheck = (id) => {
-        setItems(prev => prev.map(item => item.id === id ? { ...item, confirmed: !item.confirmed } : item));
+        setItems(prev => {
+          const updated = prev.map(item => item.id === id ? { ...item, confirmed: !item.confirmed } : item);
+          localStorage.setItem('joan_saved_luggage_v2', JSON.stringify({ trip: activeTrip, items: updated }));
+          return updated;
+        });
       };
 
+      // 數量增減
       const updateQty = (id, delta) => {
-        setItems(prev => prev.map(item => {
-          if (item.id === id) {
-            return { ...item, quantity: Math.max(1, item.quantity + delta) };
-          }
-          return item;
-        }));
+        setItems(prev => {
+          const updated = prev.map(item => {
+            if (item.id === id) {
+              return { ...item, quantity: Math.max(1, item.quantity + delta) };
+            }
+            return item;
+          });
+          localStorage.setItem('joan_saved_luggage_v2', JSON.stringify({ trip: activeTrip, items: updated }));
+          return updated;
+        });
       };
 
+      // 自訂物品新增
       const handleAddItem = (e) => {
         e.preventDefault();
         if (!newItemName.trim()) return;
-        const customItem = {
+        const custom = {
           id: 'custom-' + Date.now(),
           name: newItemName.trim(),
           type: newItemType,
@@ -325,9 +366,22 @@
           confirmed: false,
           isCustom: true
         };
-        setItems(prev => [customItem, ...prev]);
+        const updated = [custom, ...items];
+        setItems(updated);
         setNewItemName('');
+        localStorage.setItem('joan_saved_luggage_v2', JSON.stringify({ trip: activeTrip, items: updated }));
       };
+
+      // 刪除自訂物品
+      const handleDeleteItem = (id) => {
+        setItems(prev => {
+          const updated = prev.filter(i => i.id !== id);
+          localStorage.setItem('joan_saved_luggage_v2', JSON.stringify({ trip: activeTrip, items: updated }));
+          return updated;
+        });
+      };
+
+      const climate = useMemo(() => getClimateEstimation(activeTrip.destination, activeTrip.startDate), [activeTrip]);
 
       const filteredItems = useMemo(() => {
         if (activeTab === 'carry_on') return items.filter(i => i.type === 'carry_on');
@@ -338,8 +392,6 @@
       const totalCount = items.length;
       const checkedCount = items.filter(i => i.confirmed).length;
       const progressPercent = totalCount === 0 ? 0 : Math.round((checkedCount / totalCount) * 100);
-
-      const destInfo = DESTINATIONS.find(d => d.id === trip.destination) || DESTINATIONS[0];
 
       return (
         <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
@@ -354,83 +406,100 @@
               智慧整裝清單
             </h1>
             <p className="text-sm text-[#7D7063] mt-1">
-              為妳自動推算氣候裝備、換洗衣物與目的國入境時程提醒。
+              依據目的地、旅行日期與歷史氣候，自動推算妳需要的衣物數量與必備簽證時程。
             </p>
           </header>
 
-          {/* 行程設定卡片 */}
-          <section className="bg-white rounded-2xl p-5 border border-[#EBDCCF] shadow-sm mb-6">
+          {/* 參數設定面板 */}
+          <form onSubmit={handleApplyChanges} className="bg-white rounded-2xl p-5 border border-[#EBDCCF] shadow-sm mb-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-[#7D7063] mb-1">目的地</label>
                 <select
-                  value={trip.destination}
-                  onChange={e => setTrip({ ...trip, destination: e.target.value })}
+                  value={form.destination}
+                  onChange={e => setForm({ ...form, destination: e.target.value })}
                   className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
                 >
-                  {DESTINATIONS.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
+                  <option value="Bali">印尼 (峇里島/雅加達)</option>
+                  <option value="Japan">日本 (東京/關西/沖繩)</option>
+                  <option value="Europe">歐洲申根區 (法/義/奧/捷)</option>
+                  <option value="Korea">韓國 (首爾/釜山)</option>
+                  <option value="Other">其他海外國家</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#7D7063] mb-1">旅遊天數</label>
+                <label className="block text-xs font-semibold text-[#7D7063] mb-1">出發日期</label>
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={e => setForm({ ...form, startDate: e.target.value })}
+                  className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#7D7063] mb-1">旅行天數</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
                     min="1"
                     max="60"
-                    value={trip.days}
-                    onChange={e => setTrip({ ...trip, days: parseInt(e.target.value) || 1 })}
+                    value={form.days}
+                    onChange={e => setForm({ ...form, days: parseInt(e.target.value) || 1 })}
                     className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
                   />
-                  <span className="text-xs text-[#7D7063] whitespace-nowrap">天</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#7D7063] mb-1">同行人數</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={trip.travelers}
-                    onChange={e => setTrip({ ...trip, travelers: parseInt(e.target.value) || 1 })}
-                    className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
-                  />
-                  <span className="text-xs text-[#7D7063] whitespace-nowrap">人</span>
+                  <span className="text-xs text-[#7D7063]">天</span>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-[#7D7063] mb-1">洗衣安排</label>
                 <select
-                  value={trip.laundry}
-                  onChange={e => setTrip({ ...trip, laundry: e.target.value })}
+                  value={form.laundry}
+                  onChange={e => setForm({ ...form, laundry: e.target.value })}
                   className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
                 >
                   <option value="none">不洗衣服 (備妥全套)</option>
-                  <option value="midway">中途洗一次 (省行李空間)</option>
-                  <option value="everyday">天天洗 (極簡輕裝)</option>
+                  <option value="midway">中途洗一次 (行李減半)</option>
+                  <option value="everyday">每天手洗 (極簡輕裝)</option>
                 </select>
               </div>
             </div>
 
-            {/* 當地常模提示 */}
-            <div className="mt-4 pt-3 border-t border-[#F2E8DE] flex items-center justify-between text-xs text-[#7D7063]">
-              <div>
-                歷史氣候估計：約 <strong className="text-[#C0603A]">{destInfo.tempMin}°C ~ {destInfo.tempMax}°C</strong>，降雨機率 {destInfo.rain}%
-              </div>
-              <span className="text-[10px] bg-[#FAF6F0] text-[#9E8E7E] px-2 py-0.5 rounded-full">季節常模</span>
+            {/* 執行按鈕 */}
+            <div className="mt-4 pt-3 border-t border-[#F2E8DE] flex items-center justify-between">
+              <span className="text-[11px] text-[#9E8E7E]">設定修改後，請點擊更新計算</span>
+              <button
+                type="submit"
+                className="bg-[#C0603A] hover:bg-[#A8512F] text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+              >
+                重新計算整裝建議
+              </button>
             </div>
-          </section>
+          </form>
+
+          {/* 氣候常模與提醒卡片 */}
+          <div className="bg-[#FAF6F0] border border-[#E8DACD] rounded-2xl p-4 mb-6 text-xs text-[#6F6052] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#C0603A]">
+                {activeTrip.destination === 'Bali' ? '印尼 峇里島' : activeTrip.destination === 'Japan' ? '日本' : activeTrip.destination === 'Europe' ? '歐洲申根' : '海外行程'} 
+                （{activeTrip.startDate} 出發，共 {activeTrip.days} 天）
+              </span>
+              <span className="bg-[#EFE4D7] text-[#8C7A68] px-2 py-0.5 rounded text-[10px] font-semibold">歷史常模推算</span>
+            </div>
+            <div>
+              氣溫估計約 <strong>{climate.tempMin}°C ~ {climate.tempMax}°C</strong>，降雨機率 {climate.rain}%。
+            </div>
+            <div className="text-[#8A7969] text-[11px]">
+              穿著指引：{climate.desc}
+            </div>
+          </div>
 
           {/* 打包進度條 */}
           <div className="bg-white rounded-2xl p-4 border border-[#EBDCCF] shadow-sm mb-6">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-[#2C241E]">行李確認進度</span>
+              <span className="text-xs font-bold text-[#2C241E]">行李打包確認進度</span>
               <span className="text-xs font-bold text-[#C0603A]">{checkedCount} / {totalCount} 件 ({progressPercent}%)</span>
             </div>
             <div className="w-full h-2.5 bg-[#FAF6F0] rounded-full overflow-hidden">
@@ -451,7 +520,7 @@
                   : 'bg-white text-[#7D7063] border border-[#EBDCCF]'
               }`}
             >
-              全部物品 ({items.length})
+              全部 ({items.length})
             </button>
             <button
               onClick={() => setActiveTab('carry_on')}
@@ -479,7 +548,7 @@
           <form onSubmit={handleAddItem} className="flex space-x-2 mb-6">
             <input
               type="text"
-              placeholder="新增自訂必備物品..."
+              placeholder="新增自訂必備物品（如防曬乳、相機腳架）..."
               value={newItemName}
               onChange={e => setNewItemName(e.target.value)}
               className="flex-1 bg-white border border-[#EBDCCF] rounded-xl px-4 py-2.5 text-xs text-[#2C241E] focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
@@ -494,7 +563,7 @@
             </select>
             <button
               type="submit"
-              className="bg-[#C0603A] hover:bg-[#A8512F] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors"
+              className="bg-[#C0603A] hover:bg-[#A8512F] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shrink-0"
             >
               新增
             </button>
@@ -512,9 +581,9 @@
                     : 'bg-white border-[#EBDCCF] shadow-sm'
                 }`}
               >
-                <div className="flex items-start space-x-3">
+                <div className="flex items-start space-x-3 flex-1 min-w-0 pr-2">
                   <div
-                    className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                    className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center border transition-colors shrink-0 ${
                       item.confirmed
                         ? 'bg-[#C0603A] border-[#C0603A] text-white'
                         : 'border-[#CBBBB0] bg-white'
@@ -526,21 +595,21 @@
                       </svg>
                     )}
                   </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-sm font-semibold ${item.confirmed ? 'line-through text-[#9E8E7E]' : 'text-[#2C241E]'}`}>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <span className={`text-sm font-semibold truncate ${item.confirmed ? 'line-through text-[#9E8E7E]' : 'text-[#2C241E]'}`}>
                         {item.name}
                       </span>
                       {item.type === 'carry_on' ? (
-                        <span className="text-[10px] bg-[#FFF2EC] text-[#C0603A] font-semibold px-1.5 py-0.5 rounded">隨身</span>
+                        <span className="text-[10px] bg-[#FFF2EC] text-[#C0603A] font-semibold px-1.5 py-0.5 rounded shrink-0">隨身</span>
                       ) : (
-                        <span className="text-[10px] bg-[#F4EDE5] text-[#8A624A] font-semibold px-1.5 py-0.5 rounded">托運</span>
+                        <span className="text-[10px] bg-[#F4EDE5] text-[#8A624A] font-semibold px-1.5 py-0.5 rounded shrink-0">托運</span>
                       )}
                     </div>
 
-                    {/* 倒數時程提醒 */}
+                    {/* 前置申辦倒數時程 */}
                     {item.dueTiming && (
-                      <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
+                      <div className="mt-1 flex items-center space-x-1.5 text-[11px] flex-wrap">
                         <span
                           className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${
                             item.urgency === 'high'
@@ -564,9 +633,9 @@
                   </div>
                 </div>
 
-                {/* 數量微調按鈕 */}
+                {/* 數量調整與自訂刪除 */}
                 <div
-                  className="flex items-center space-x-1 ml-2"
+                  className="flex items-center space-x-1 shrink-0"
                   onClick={e => e.stopPropagation()}
                 >
                   <button
@@ -584,6 +653,15 @@
                   >
                     +
                   </button>
+                  {item.isCustom && (
+                    <button
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="ml-1 text-[#C0603A] hover:text-rose-700 p-1 text-xs"
+                      title="刪除"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
