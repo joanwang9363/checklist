@@ -35,20 +35,21 @@
     // --- 氣候資料庫 ---
     function getClimateEstimation(destination, dateStr) {
       const month = dateStr ? new Date(dateStr).getMonth() + 1 : 4;
+      const dest = destination.toLowerCase().trim();
       
-      if (destination === 'Japan') {
+      if (dest.includes('日本') || dest.includes('東京') || dest.includes('大阪') || dest.includes('京都') || dest.includes('熱海') || dest.includes('伊豆') || dest.includes('箱根')) {
         if ([12, 1, 2].includes(month)) return { tempMin: 2, tempMax: 10, rain: 20, desc: '冬季寒冷乾燥，需備妥保濕用品與厚外套。' };
         if ([3, 4, 5].includes(month)) return { tempMin: 11, tempMax: 19, rain: 30, desc: '春季微涼，早晚溫差大，建議洋蔥式穿搭。' };
         if ([6, 7, 8].includes(month)) return { tempMin: 23, tempMax: 32, rain: 50, desc: '夏季炎熱多雨，務必做好防曬與攜帶折傘。' };
         return { tempMin: 13, tempMax: 21, rain: 25, desc: '秋季涼爽宜人，適合攜帶輕薄罩衫與風衣。' };
       }
       
-      if (destination === 'Bali') {
-        if (month >= 4 && month <= 10) return { tempMin: 24, tempMax: 31, rain: 15, desc: '正值峇里島乾季，陽光充沛，需準備高強度防曬。' };
-        return { tempMin: 25, tempMax: 32, rain: 60, desc: '正值峇里島雨季，午後易有陣雨，建議攜帶防潑水鞋履。' };
+      if (dest.includes('峇里島') || dest.includes('印尼') || dest.includes('bali')) {
+        if (month >= 4 && month <= 10) return { tempMin: 24, tempMax: 31, rain: 15, desc: '正值當地乾季，陽光充沛，需準備高強度防曬。' };
+        return { tempMin: 25, tempMax: 32, rain: 60, desc: '正值當地雨季，午後易有陣雨，建議攜帶防潑水鞋履。' };
       }
 
-      if (destination === 'Europe') {
+      if (dest.includes('歐洲') || dest.includes('巴黎') || dest.includes('倫敦') || dest.includes('法') || dest.includes('義') || dest.includes('英')) {
         if ([11, 12, 1, 2, 3].includes(month)) return { tempMin: 0, tempMax: 8, rain: 35, desc: '秋冬寒冷，務必準備保暖大衣與羊毛配件。' };
         return { tempMin: 12, tempMax: 25, rain: 30, desc: '春夏舒爽微涼，日夜溫差明顯，適合層次穿搭。' };
       }
@@ -58,9 +59,10 @@
 
     // --- 換匯與財務資料庫 ---
     function getFinanceAdvice(destination) {
-      const generalTip = "建議將主力的海外高回饋信用卡（如用來集中累積長榮航空哩程的卡片）設定好海外提款密碼，並開通跨國交易功能。";
+      const dest = destination.toLowerCase().trim();
+      const generalTip = "建議將主力的海外高回饋信用卡設定好海外提款密碼，並開通跨國交易功能。";
       
-      if (destination === 'Japan') {
+      if (dest.includes('日本') || dest.includes('東京') || dest.includes('大阪') || dest.includes('京都') || dest.includes('熱海') || dest.includes('伊豆') || dest.includes('箱根')) {
         return {
           currency: '日圓 (JPY)',
           rate: '近期匯率波動大，建議分批換匯。',
@@ -72,26 +74,26 @@
           ]
         };
       }
-      if (destination === 'Bali') {
+      if (dest.includes('峇里島') || dest.includes('印尼') || dest.includes('bali')) {
         return {
           currency: '印尼盾 (IDR)',
           rate: '面額極大，結帳時注意尾數（通常以千為單位計算）。',
           tips: [
-            '建議在台灣先換好「美金百元大鈔」，抵達峇里島當地（如 Kuta 或 Ubud 市區）再找合法換匯所換印尼盾，匯率最划算。',
+            '建議在台灣先換好「美金百元大鈔」，抵達當地再找合法換匯所換印尼盾，匯率最划算。',
             '準備小面額印尼盾（10,000或20,000）方便給予床頭小費或行李小費。',
             '當地 Grab / Gojek 叫車可直接綁定信用卡自動扣款，免去現金找零麻煩。',
             generalTip
           ]
         };
       }
-      if (destination === 'Europe') {
+      if (dest.includes('歐洲') || dest.includes('巴黎') || dest.includes('倫敦') || dest.includes('法') || dest.includes('義') || dest.includes('英')) {
         return {
           currency: '歐元 (EUR) / 當地貨幣',
-          rate: '歐元為主，部分國家（如捷克）使用克朗。',
+          rate: '歐元為主，部分國家（如捷克、英國）使用當地貨幣。',
           tips: [
             '歐洲無現金化程度極高，95% 以上消費皆可刷卡。',
             '準備零錢或小鈔主要用於付費廁所、市集小攤販或床頭小費。',
-            '歐洲有時刷卡機會要求輸入 4 位數 PIN 碼，請務必先在台灣向銀行申請「預借現金密碼」作為備用。',
+            '歐洲有時刷卡機會要求輸入 4 位數 PIN 碼，請務必先向銀行申請「預借現金密碼」作為備用。',
             generalTip
           ]
         };
@@ -109,40 +111,202 @@
 
     // --- 入境文件推算 ---
     function getDocumentItems(destination) {
+      const dest = destination.toLowerCase().trim();
       const items = [
         { name: '護照正本 (有效期限 6 個月以上)', due: '出發前 1~2 個月檢查換發', urgency: 'high', checked: false },
         { name: '電子機票行程單 & 住宿離線憑證', due: '出發前 24~72 小時', urgency: 'low', checked: false }
       ];
 
-      if (destination === 'Japan') {
+      if (dest.includes('日本') || dest.includes('東京') || dest.includes('大阪') || dest.includes('京都') || dest.includes('熱海') || dest.includes('伊豆') || dest.includes('箱根')) {
         items.push({ name: 'Visit Japan Web (VJW) 入境 QR 截圖', due: '出發前 24~48 小時', urgency: 'low', checked: false });
-      } else if (destination === 'Bali') {
+      } else if (dest.includes('峇里島') || dest.includes('印尼') || dest.includes('bali')) {
         items.push({ name: '印尼電子落地簽 (e-VoA) & 觀光稅繳費', due: '出發前 3~7 天線上申辦', urgency: 'medium', checked: false });
         items.push({ name: '印尼 ECD 電子海關申報 QR 截圖', due: '起飛前 3 天內線上填報', urgency: 'low', checked: false });
-      } else if (destination === 'Europe') {
-        items.push({ name: '申根醫療保險英文投保證明 (紙本)', due: '出發前 2~3 週向保險公司申請', urgency: 'medium', checked: false });
+      } else if (dest.includes('歐洲') || dest.includes('巴黎') || dest.includes('倫敦') || dest.includes('法') || dest.includes('義') || dest.includes('英')) {
+        items.push({ name: '申根/當地醫療保險英文投保證明 (紙本)', due: '出發前 2~3 週向保險公司申請', urgency: 'medium', checked: false });
       }
       return items;
+    }
+
+    // --- 每日建議行程推算 (GEM 旅遊大師 - 離線備用) ---
+    function generateFallbackItinerary(destination, days) {
+      const dest = destination.toLowerCase().trim();
+      const itineraries = [];
+      for (let i = 1; i <= days; i++) {
+        let title = '';
+        let schedule = [];
+        let hotel = '建議挑選近車站或市區中心的質感設計旅店。';
+        let transport = '從機場搭乘快捷直達市區，市內以地鐵/巴士為主。';
+        let dining = '晚餐建議預約當地知名的浪漫景觀餐廳。';
+        
+        if (i === 1) {
+          title = '抵達與安頓';
+          schedule = [
+            { time: "14:00", activity: "抵達機場並前往飯店辦理入住手續。" },
+            { time: "16:00", activity: "適應當地氣候與步調，安排輕鬆的周邊探索。" },
+            { time: "18:30", activity: "享用道地晚餐，為接下來的旅程儲備體力。" }
+          ];
+        } else if (i === days) {
+          title = '滿載而歸';
+          schedule = [
+            { time: "09:30", activity: "飯店享用早餐並辦理退房。" },
+            { time: "10:30", activity: "把握最後的採買時光，收拾行囊。" },
+            { time: "13:00", activity: "提早前往機場準備搭機回程。" }
+          ];
+          transport = '搭乘計程車或機場快線前往機場。';
+        } else {
+          title = '深度探索';
+          schedule = [
+            { time: "09:00", activity: "從飯店出發，前往當地最具代表性的景點。" },
+            { time: "12:30", activity: "享用當地特色午餐。" },
+            { time: "14:30", activity: "漫步特色街區，安排美術館或景觀咖啡廳下午茶。" },
+            { time: "18:30", activity: "前往預約好的高質感浪漫雙人餐廳。" }
+          ];
+        }
+        itineraries.push({ day: i, title, schedule, hotel, transport, dining });
+      }
+      return itineraries;
+    }
+
+    // --- GEM API 跨國情報與行程即時生成 ---
+    async function fetchGeminiGrandPlan(destination, days) {
+        const payload = {
+            contents: [{
+                role: "user",
+                parts: [{ text: `你是一位頂級旅遊規劃師「GEM 旅遊大師」。請為我規劃前往「${destination}」的 ${days} 天專屬行程。我們喜歡質感與愜意的步調。
+請嚴格按照以下 JSON Schema 回傳資料，包含三大部分，務必提供最真實的資訊：
+1. visaAndDocs: 該國家的簽證、入境規定或必備電子申報文件，並附帶辦理時程與急迫性 (high/medium/low)。
+2. finance: 該國家的當地貨幣名稱、匯率概況/刷卡普及度，以及至少 3 項具體的換匯或財務建議。
+3. itinerary: 每日行程，必須包含明確的時間點 (time) 與景點活動 (activity)，以及住宿、交通、餐廳的實體建議。` }]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        "visaAndDocs": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "name": { "type": "STRING", "description": "如：印尼電子落地簽 (e-VoA)" },
+                                    "due": { "type": "STRING", "description": "如：出發前 3~7 天" },
+                                    "urgency": { "type": "STRING", "description": "填寫 high, medium 或 low" }
+                                },
+                                "required": ["name", "due", "urgency"]
+                            }
+                        },
+                        "finance": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "currency": { "type": "STRING", "description": "如：日圓 (JPY)" },
+                                "rate": { "type": "STRING", "description": "匯率概況或當地支付習慣" },
+                                "tips": { "type": "ARRAY", "items": { "type": "STRING" } }
+                            },
+                            "required": ["currency", "rate", "tips"]
+                        },
+                        "itinerary": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "day": { "type": "INTEGER" },
+                                    "title": { "type": "STRING" },
+                                    "schedule": {
+                                        "type": "ARRAY",
+                                        "items": {
+                                            "type": "OBJECT",
+                                            "properties": {
+                                                "time": { "type": "STRING", "description": "如 09:00" },
+                                                "activity": { "type": "STRING", "description": "景點活動內容" }
+                                            },
+                                            "required": ["time", "activity"]
+                                        }
+                                    },
+                                    "hotel": { "type": "STRING" },
+                                    "transport": { "type": "STRING" },
+                                    "dining": { "type": "STRING" }
+                                },
+                                "required": ["day", "title", "schedule", "hotel", "transport", "dining"]
+                            }
+                        }
+                    },
+                    "required": ["visaAndDocs", "finance", "itinerary"]
+                }
+            }
+        };
+        const apiKey = ""; // 畫布環境自動注入
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+        
+        let delay = 1000;
+        for (let i = 0; i < 3; i++) {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    if (response.status === 429 && i < 2) {
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2;
+                        continue;
+                    }
+                    throw new Error('API request failed');
+                }
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0) {
+                    const jsonStr = result.candidates[0].content.parts[0].text;
+                    return JSON.parse(jsonStr);
+                }
+            } catch (err) {
+                if (i === 2) throw err;
+                await new Promise(r => setTimeout(r, delay));
+                delay *= 2;
+            }
+        }
+        throw new Error('Failed to generate itinerary');
     }
 
     // --- 主介面 ---
     function App() {
       const [form, setForm] = useState({
-        destination: 'Japan',
+        destination: '東京郊區 (熱海/伊豆)',
         startDate: '2027-04-04',
-        days: 7
+        days: 5
       });
       const [activeTrip, setActiveTrip] = useState(form);
-      const [docs, setDocs] = useState([]);
+      
+      const [docs, setDocs] = useState(() => getDocumentItems(form.destination));
+      const [finance, setFinance] = useState(() => getFinanceAdvice(form.destination));
+      const [itinerary, setItinerary] = useState([]);
+      const [isGenerating, setIsGenerating] = useState(false);
 
       useEffect(() => {
-        setDocs(getDocumentItems(form.destination));
+        generateAIItinerary(form.destination, form.days);
       }, []);
+
+      const generateAIItinerary = async (dest, days) => {
+        setIsGenerating(true);
+        try {
+          const aiData = await fetchGeminiGrandPlan(dest, days);
+          setDocs(aiData.visaAndDocs.map(d => ({ ...d, checked: false })));
+          setFinance(aiData.finance);
+          setItinerary(aiData.itinerary);
+        } catch(err) {
+          console.warn("API 回應超時或錯誤，啟用備用離線建議", err);
+          setDocs(getDocumentItems(dest));
+          setFinance(getFinanceAdvice(dest));
+          setItinerary(generateFallbackItinerary(dest, days));
+        } finally {
+          setIsGenerating(false);
+        }
+      };
 
       const handleApplyChanges = (e) => {
         e.preventDefault();
         setActiveTrip(form);
-        setDocs(getDocumentItems(form.destination));
+        generateAIItinerary(form.destination, form.days);
       };
 
       const toggleDoc = (index) => {
@@ -150,12 +314,6 @@
       };
 
       const climate = useMemo(() => getClimateEstimation(activeTrip.destination, activeTrip.startDate), [activeTrip]);
-      const finance = useMemo(() => getFinanceAdvice(activeTrip.destination), [activeTrip]);
-
-      const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        alert('已複製提示詞，可直接貼給 GEM 旅遊大師！');
-      };
 
       return (
         <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
@@ -173,31 +331,28 @@
 
           {/* 參數設定 */}
           <form onSubmit={handleApplyChanges} className="bg-white rounded-2xl p-5 border border-[#EBDCCF] shadow-sm mb-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-1">
-                <label className="block text-xs font-semibold text-[#7D7063] mb-1">目的地</label>
-                <select
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="col-span-1 md:col-span-1">
+                <label className="block text-xs font-semibold text-[#7D7063] mb-1">目的地 (可自由輸入)</label>
+                <input
+                  type="text"
+                  placeholder="如：東京郊區、伊豆、巴黎..."
                   value={form.destination}
                   onChange={e => setForm({ ...form, destination: e.target.value })}
                   className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
-                >
-                  <option value="Japan">日本</option>
-                  <option value="Bali">印尼 (峇里島)</option>
-                  <option value="Europe">歐洲</option>
-                  <option value="Other">其他國家</option>
-                </select>
+                />
               </div>
-              <div className="col-span-1">
+              <div className="col-span-1 md:col-span-1">
                 <label className="block text-xs font-semibold text-[#7D7063] mb-1">出發日期</label>
                 <input
                   type="date"
                   value={form.startDate}
                   onChange={e => setForm({ ...form, startDate: e.target.value })}
-                  className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
+                  className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-2 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
                 />
               </div>
-              <div className="col-span-1">
-                <label className="block text-xs font-semibold text-[#7D7063] mb-1">天數</label>
+              <div className="col-span-1 md:col-span-1">
+                <label className="block text-xs font-semibold text-[#7D7063] mb-1">旅行天數</label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
@@ -211,8 +366,8 @@
               </div>
             </div>
             <div className="mt-4 flex justify-end">
-              <button type="submit" className="bg-[#2C241E] hover:bg-[#1A1511] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all">
-                更新行前情報
+              <button type="submit" className="bg-[#2C241E] hover:bg-[#1A1511] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md">
+                更新情報與行程
               </button>
             </div>
           </form>
@@ -233,7 +388,7 @@
             <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
               <span className="text-xl mr-2">🛂</span> 簽證與必備文件時程
             </h2>
-            <div className="space-y-2">
+            <div className={`space-y-2 ${isGenerating ? 'opacity-50 pointer-events-none transition-all' : 'transition-all'}`}>
               {docs.map((doc, index) => (
                 <div
                   key={index}
@@ -268,7 +423,7 @@
             <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
               <span className="text-xl mr-2">💰</span> 換匯與財務注意事項
             </h2>
-            <div className="bg-white border border-[#EBDCCF] rounded-2xl p-4">
+            <div className={`bg-white border border-[#EBDCCF] rounded-2xl p-4 shadow-sm ${isGenerating ? 'opacity-50 pointer-events-none transition-all' : 'transition-all'}`}>
               <div className="flex items-center justify-between mb-3 border-b border-[#F2E8DE] pb-2">
                 <span className="text-sm font-bold text-[#2C241E]">{finance.currency}</span>
                 <span className="text-xs text-[#8A624A] bg-[#F4EDE5] px-2 py-1 rounded-md">{finance.rate}</span>
@@ -290,29 +445,60 @@
               <span className="text-xl mr-2">✨</span> 專屬旅遊規劃：GEM 旅遊大師
             </h2>
             <div className="bg-gradient-to-br from-[#FAF6F0] to-[#F2E8DE] border border-[#E8DACD] rounded-2xl p-5">
-              <p className="text-sm text-[#6F6052] mb-4 leading-relaxed">
-                還沒排好行程？或是想臨時尋找當地美食？<br/>複製下方的提示詞，貼給 <strong>Gemini</strong>，讓 AI 旅遊大師為妳量身打造完美提案。
-              </p>
               
-              <div className="space-y-3">
-                <div className="bg-white rounded-xl p-3 border border-[#EBDCCF] flex justify-between items-start group">
-                  <div className="text-xs text-[#2C241E] pr-4">
-                    「請幫我規劃 {activeTrip.destination === 'Japan' ? '日本' : activeTrip.destination === 'Bali' ? '峇里島' : '出國'} {form.days} 天的行程。我們是一對夫妻，喜歡質感與愜意的步調，請推薦適合安排浪漫雙人晚餐的餐廳，並列出每日交通方式。」
+              {/* 動態生成的每日行程 */}
+              <div>
+                {isGenerating ? (
+                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                    <div className="w-8 h-8 border-4 border-[#EBDCCF] border-t-[#C0603A] rounded-full animate-spin"></div>
+                    <div className="text-sm font-bold text-[#C0603A] animate-pulse">
+                      ✨ GEM 旅遊大師正在為您即時分析並生成「{activeTrip.destination}」的簽證、財務與專屬行程...
+                    </div>
                   </div>
-                  <button onClick={() => copyToClipboard(`請幫我規劃 ${activeTrip.destination === 'Japan' ? '日本' : activeTrip.destination === 'Bali' ? '峇里島' : '出國'} ${form.days} 天的行程。我們是一對夫妻，喜歡質感與愜意的步調，請推薦適合安排浪漫雙人晚餐的餐廳，並列出每日交通方式。`)} className="shrink-0 text-[#C0603A] hover:bg-[#FFF2EC] p-1.5 rounded-md transition-colors">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                  </button>
-                </div>
-
-                <div className="bg-white rounded-xl p-3 border border-[#EBDCCF] flex justify-between items-start group">
-                  <div className="text-xs text-[#2C241E] pr-4">
-                    「我正在 {activeTrip.destination === 'Japan' ? '日本' : activeTrip.destination === 'Bali' ? '峇里島' : '國外'} 旅遊，請列出 10 句在當地點餐、要求結帳以及請飯店人員協助搬運行李時，最實用且有禮貌的當地語言短句，並附上中文諧音或英文讀法。」
+                ) : (
+                  <div>
+                    <h3 className="text-xs font-bold text-[#8A624A] mb-4 bg-[#F4EDE5] inline-block px-3 py-1.5 rounded-full border border-[#E0D2C3]">
+                      為妳客製的 {activeTrip.days} 天深度行程
+                    </h3>
+                    <div className="relative border-l-2 border-[#EBDCCF] ml-3 pl-5 space-y-6">
+                      {itinerary.map((item, index) => (
+                        <div key={index} className="relative">
+                          <div className="absolute -left-[27px] top-0.5 w-3.5 h-3.5 bg-[#C0603A] rounded-full ring-4 ring-[#FAF6F0]"></div>
+                          <div className="text-xs font-bold text-[#C0603A] mb-0.5 tracking-wider uppercase">Day {item.day}</div>
+                          <div className="text-sm font-bold text-[#2C241E] mb-2">{item.title}</div>
+                          
+                          {/* 帶有時間軸的排程清單 */}
+                          <div className="space-y-1.5 mb-3">
+                            {item.schedule.map((slot, idx) => (
+                              <div key={idx} className="flex items-start text-xs">
+                                <span className="font-bold text-[#E87A5D] w-12 shrink-0">{slot.time}</span>
+                                <span className="text-[#6F6052] leading-relaxed">{slot.activity}</span>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* 新增：住宿、交通、美食詳細情報卡 */}
+                          <div className="bg-white rounded-xl p-3 space-y-2 border border-[#EBDCCF] shadow-sm text-[11px]">
+                            <div className="flex items-start">
+                              <span className="mr-2 mt-0.5 text-sm">🏨</span>
+                              <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">住宿建議:</strong>{item.hotel}</span>
+                            </div>
+                            <div className="flex items-start border-t border-[#F2E8DE] pt-2">
+                              <span className="mr-2 mt-0.5 text-sm">🚇</span>
+                              <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">交通動線:</strong>{item.transport}</span>
+                            </div>
+                            <div className="flex items-start border-t border-[#F2E8DE] pt-2">
+                              <span className="mr-2 mt-0.5 text-sm">🍽️</span>
+                              <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">浪漫美饌:</strong>{item.dining}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <button onClick={() => copyToClipboard(`我正在 ${activeTrip.destination === 'Japan' ? '日本' : activeTrip.destination === 'Bali' ? '峇里島' : '國外'} 旅遊，請列出 10 句在當地點餐、要求結帳以及請飯店人員協助搬運行李時，最實用且有禮貌的當地語言短句，並附上中文諧音或英文讀法。`)} className="shrink-0 text-[#C0603A] hover:bg-[#FFF2EC] p-1.5 rounded-md transition-colors">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                  </button>
-                </div>
+                )}
               </div>
+
             </div>
           </section>
 
