@@ -169,14 +169,14 @@
     }
 
     // --- GEM API 跨國情報與行程即時生成 ---
-    async function fetchGeminiGrandPlan(destination, days) {
+    async function fetchGeminiGrandPlan(destination, days, apiKey) {
         const payload = {
             contents: [{
                 role: "user",
                 parts: [{ text: `你是一位頂級旅遊規劃師「GEM 旅遊大師」。請為我規劃前往「${destination}」的 ${days} 天專屬行程。我們喜歡質感與愜意的步調。
 【重要禁止事項】：請絕對不要輸出任何與 COVID-19、新冠肺炎、疫苗證明、PCR 檢測相關的過時疫情規定。
 請嚴格按照以下 JSON Schema 回傳資料，包含三大部分，務必提供最真實的資訊：
-1. visaAndDocs: 該國家的簽證、入境規定或必備電子申報文件，並附帶辦理時程與急迫性 (high/medium/low)。
+1. visaAndDocs: 該國家的簽證、入境規定或必備電子申報文件 (請以「台灣護照」旅客為基準)，並附帶辦理時程與急迫性 (high/medium/low)。
 2. finance: 該國家的當地貨幣名稱、匯率概況/刷卡普及度，以及至少 3 項具體的換匯或財務建議。
 3. itinerary: 每日行程，必須包含明確的時間點 (time) 與景點活動 (activity)，以及住宿、交通、餐廳的實體建議。` }]
             }],
@@ -236,7 +236,6 @@
                 }
             }
         };
-        const apiKey = ""; // 畫布環境自動注入
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
         
         let delay = 1000;
@@ -271,6 +270,7 @@
 
     // --- 主介面 ---
     function App() {
+      const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
       const [form, setForm] = useState({
         destination: '',
         startDate: new Date().toISOString().split('T')[0],
@@ -284,10 +284,10 @@
       const [isGenerating, setIsGenerating] = useState(false);
       const [hasSearched, setHasSearched] = useState(false);
 
-      const generateAIItinerary = async (dest, days) => {
+      const generateAIItinerary = async (dest, days, key) => {
         setIsGenerating(true);
         try {
-          const aiData = await fetchGeminiGrandPlan(dest, days);
+          const aiData = await fetchGeminiGrandPlan(dest, days, key);
           setDocs(aiData.visaAndDocs.map(d => ({ ...d, checked: false })));
           setFinance(aiData.finance);
           setItinerary(aiData.itinerary);
@@ -304,9 +304,21 @@
       const handleApplyChanges = (e) => {
         e.preventDefault();
         if (!form.destination.trim()) return;
+        
+        localStorage.setItem('gemini_api_key', apiKey); // 記憶金鑰
         setActiveTrip(form);
         setHasSearched(true);
-        generateAIItinerary(form.destination, form.days);
+
+        // 若無金鑰，給予提示並使用備用資料
+        if (!apiKey.trim()) {
+            alert('尚未輸入 Gemini API Key，將為您顯示內建的基本行程與情報。\n(若需 AI 專屬規劃，請在下方輸入金鑰)');
+            setDocs(getDocumentItems(form.destination));
+            setFinance(getFinanceAdvice(form.destination));
+            setItinerary(generateFallbackItinerary(form.destination, form.days));
+            return;
+        }
+
+        generateAIItinerary(form.destination, form.days, apiKey);
       };
 
       const toggleDoc = (index) => {
@@ -365,8 +377,22 @@
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex justify-end">
-              <button type="submit" className="bg-[#2C241E] hover:bg-[#1A1511] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md">
+
+            <div className="mt-4 pt-4 border-t border-[#F2E8DE] flex flex-col md:flex-row items-end justify-between gap-4">
+              <div className="w-full md:w-2/3">
+                <label className="block text-xs font-semibold text-[#7D7063] mb-1 flex items-center">
+                  <span className="mr-1">🔑</span> Gemini API Key (AI 啟用金鑰)
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" className="ml-2 text-[#C0603A] underline text-[10px]">免費取得金鑰</a>
+                </label>
+                <input
+                  type="password"
+                  placeholder="請貼上您的 AIzaSy... 金鑰"
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  className="w-full bg-[#FAF6F0] border border-[#E0D2C3] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C0603A]"
+                />
+              </div>
+              <button type="submit" className="w-full md:w-auto shrink-0 bg-[#2C241E] hover:bg-[#1A1511] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md">
                 更新情報與行程
               </button>
             </div>
