@@ -174,6 +174,7 @@
             contents: [{
                 role: "user",
                 parts: [{ text: `你是一位頂級旅遊規劃師「GEM 旅遊大師」。請為我規劃前往「${destination}」的 ${days} 天專屬行程。我們喜歡質感與愜意的步調。
+【重要禁止事項】：請絕對不要輸出任何與 COVID-19、新冠肺炎、疫苗證明、PCR 檢測相關的過時疫情規定。
 請嚴格按照以下 JSON Schema 回傳資料，包含三大部分，務必提供最真實的資訊：
 1. visaAndDocs: 該國家的簽證、入境規定或必備電子申報文件，並附帶辦理時程與急迫性 (high/medium/low)。
 2. finance: 該國家的當地貨幣名稱、匯率概況/刷卡普及度，以及至少 3 項具體的換匯或財務建議。
@@ -271,20 +272,17 @@
     // --- 主介面 ---
     function App() {
       const [form, setForm] = useState({
-        destination: '東京郊區 (熱海/伊豆)',
-        startDate: '2027-04-04',
+        destination: '',
+        startDate: new Date().toISOString().split('T')[0],
         days: 5
       });
       const [activeTrip, setActiveTrip] = useState(form);
       
-      const [docs, setDocs] = useState(() => getDocumentItems(form.destination));
-      const [finance, setFinance] = useState(() => getFinanceAdvice(form.destination));
+      const [docs, setDocs] = useState([]);
+      const [finance, setFinance] = useState(null);
       const [itinerary, setItinerary] = useState([]);
       const [isGenerating, setIsGenerating] = useState(false);
-
-      useEffect(() => {
-        generateAIItinerary(form.destination, form.days);
-      }, []);
+      const [hasSearched, setHasSearched] = useState(false);
 
       const generateAIItinerary = async (dest, days) => {
         setIsGenerating(true);
@@ -305,7 +303,9 @@
 
       const handleApplyChanges = (e) => {
         e.preventDefault();
+        if (!form.destination.trim()) return;
         setActiveTrip(form);
+        setHasSearched(true);
         generateAIItinerary(form.destination, form.days);
       };
 
@@ -372,135 +372,152 @@
             </div>
           </form>
 
-          {/* 天氣與環境 */}
-          <section className="mb-6">
-            <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
-              <span className="text-xl mr-2">🌤️</span> 氣候與環境概況
-            </h2>
-            <div className="bg-[#FAF6F0] border border-[#E8DACD] rounded-2xl p-4 text-sm text-[#6F6052]">
-              <p className="mb-1">預估氣溫：<strong className="text-[#C0603A]">{climate.tempMin}°C ~ {climate.tempMax}°C</strong> (降雨機率 {climate.rain}%)</p>
-              <p>{climate.desc}</p>
+          {!hasSearched ? (
+            <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[#EBDCCF] shadow-sm mb-6 flex flex-col items-center">
+              <span className="text-5xl mb-4">🌍</span>
+              <h2 className="text-lg font-bold text-[#2C241E] mb-2">準備好出發了嗎？</h2>
+              <p className="text-sm text-[#7D7063] leading-relaxed">
+                請在上方輸入您想去的目的地（如：奧地利、北海道、印尼龍目島）<br/>
+                點擊更新，GEM 旅遊大師將即時為您運算最新簽證情報與專屬行程！
+              </p>
             </div>
-          </section>
-
-          {/* 入境文件 */}
-          <section className="mb-6">
-            <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
-              <span className="text-xl mr-2">🛂</span> 簽證與必備文件時程
-            </h2>
-            <div className={`space-y-2 ${isGenerating ? 'opacity-50 pointer-events-none transition-all' : 'transition-all'}`}>
-              {docs.map((doc, index) => (
-                <div
-                  key={index}
-                  onClick={() => toggleDoc(index)}
-                  className={`flex items-start p-3.5 rounded-xl border cursor-pointer select-none transition-all ${
-                    doc.checked ? 'bg-[#FAF6F0] border-[#E0D2C3] opacity-60' : 'bg-white border-[#EBDCCF]'
-                  }`}
-                >
-                  <div className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center border mr-3 shrink-0 ${
-                    doc.checked ? 'bg-[#C0603A] border-[#C0603A] text-white' : 'bg-white border-[#CBBBB0]'
-                  }`}>
-                    {doc.checked && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                  </div>
-                  <div>
-                    <div className={`text-sm font-semibold ${doc.checked ? 'line-through text-[#9E8E7E]' : 'text-[#2C241E]'}`}>{doc.name}</div>
-                    <div className="mt-1 text-[11px]">
-                      <span className={`font-semibold px-1.5 py-0.5 rounded ${
-                        doc.urgency === 'high' ? 'bg-rose-100 text-rose-700' :
-                        doc.urgency === 'medium' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {doc.due}
-                      </span>
-                    </div>
-                  </div>
+          ) : (
+            <>
+              {/* 天氣與環境 */}
+              <section className="mb-6">
+                <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
+                  <span className="text-xl mr-2">🌤️</span> 氣候與環境概況
+                </h2>
+                <div className="bg-[#FAF6F0] border border-[#E8DACD] rounded-2xl p-4 text-sm text-[#6F6052]">
+                  <p className="mb-1">預估氣溫：<strong className="text-[#C0603A]">{climate.tempMin}°C ~ {climate.tempMax}°C</strong> (降雨機率 {climate.rain}%)</p>
+                  <p>{climate.desc}</p>
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
 
-          {/* 換匯財務 */}
-          <section className="mb-6">
-            <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
-              <span className="text-xl mr-2">💰</span> 換匯與財務注意事項
-            </h2>
-            <div className={`bg-white border border-[#EBDCCF] rounded-2xl p-4 shadow-sm ${isGenerating ? 'opacity-50 pointer-events-none transition-all' : 'transition-all'}`}>
-              <div className="flex items-center justify-between mb-3 border-b border-[#F2E8DE] pb-2">
-                <span className="text-sm font-bold text-[#2C241E]">{finance.currency}</span>
-                <span className="text-xs text-[#8A624A] bg-[#F4EDE5] px-2 py-1 rounded-md">{finance.rate}</span>
-              </div>
-              <ul className="space-y-2">
-                {finance.tips.map((tip, idx) => (
-                  <li key={idx} className="text-sm text-[#7D7063] flex items-start">
-                    <span className="text-[#C0603A] mr-2">•</span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          {/* GEM 旅遊大師 */}
-          <section>
-            <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
-              <span className="text-xl mr-2">✨</span> 專屬旅遊規劃：GEM 旅遊大師
-            </h2>
-            <div className="bg-gradient-to-br from-[#FAF6F0] to-[#F2E8DE] border border-[#E8DACD] rounded-2xl p-5">
-              
-              {/* 動態生成的每日行程 */}
-              <div>
-                {isGenerating ? (
-                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                    <div className="w-8 h-8 border-4 border-[#EBDCCF] border-t-[#C0603A] rounded-full animate-spin"></div>
-                    <div className="text-sm font-bold text-[#C0603A] animate-pulse">
-                      ✨ GEM 旅遊大師正在為您即時分析並生成「{activeTrip.destination}」的簽證、財務與專屬行程...
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <h3 className="text-xs font-bold text-[#8A624A] mb-4 bg-[#F4EDE5] inline-block px-3 py-1.5 rounded-full border border-[#E0D2C3]">
-                      為妳客製的 {activeTrip.days} 天深度行程
-                    </h3>
-                    <div className="relative border-l-2 border-[#EBDCCF] ml-3 pl-5 space-y-6">
-                      {itinerary.map((item, index) => (
-                        <div key={index} className="relative">
-                          <div className="absolute -left-[27px] top-0.5 w-3.5 h-3.5 bg-[#C0603A] rounded-full ring-4 ring-[#FAF6F0]"></div>
-                          <div className="text-xs font-bold text-[#C0603A] mb-0.5 tracking-wider uppercase">Day {item.day}</div>
-                          <div className="text-sm font-bold text-[#2C241E] mb-2">{item.title}</div>
-                          
-                          {/* 帶有時間軸的排程清單 */}
-                          <div className="space-y-1.5 mb-3">
-                            {item.schedule.map((slot, idx) => (
-                              <div key={idx} className="flex items-start text-xs">
-                                <span className="font-bold text-[#E87A5D] w-12 shrink-0">{slot.time}</span>
-                                <span className="text-[#6F6052] leading-relaxed">{slot.activity}</span>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {/* 新增：住宿、交通、美食詳細情報卡 */}
-                          <div className="bg-white rounded-xl p-3 space-y-2 border border-[#EBDCCF] shadow-sm text-[11px]">
-                            <div className="flex items-start">
-                              <span className="mr-2 mt-0.5 text-sm">🏨</span>
-                              <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">住宿建議:</strong>{item.hotel}</span>
-                            </div>
-                            <div className="flex items-start border-t border-[#F2E8DE] pt-2">
-                              <span className="mr-2 mt-0.5 text-sm">🚇</span>
-                              <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">交通動線:</strong>{item.transport}</span>
-                            </div>
-                            <div className="flex items-start border-t border-[#F2E8DE] pt-2">
-                              <span className="mr-2 mt-0.5 text-sm">🍽️</span>
-                              <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">浪漫美饌:</strong>{item.dining}</span>
-                            </div>
-                          </div>
+              {/* 入境文件 */}
+              <section className="mb-6">
+                <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
+                  <span className="text-xl mr-2">🛂</span> 簽證與必備文件時程
+                </h2>
+                <div className={`space-y-2 ${isGenerating ? 'opacity-50 pointer-events-none transition-all' : 'transition-all'}`}>
+                  {docs.map((doc, index) => (
+                    <div
+                      key={index}
+                      onClick={() => toggleDoc(index)}
+                      className={`flex items-start p-3.5 rounded-xl border cursor-pointer select-none transition-all ${
+                        doc.checked ? 'bg-[#FAF6F0] border-[#E0D2C3] opacity-60' : 'bg-white border-[#EBDCCF]'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center border mr-3 shrink-0 ${
+                        doc.checked ? 'bg-[#C0603A] border-[#C0603A] text-white' : 'bg-white border-[#CBBBB0]'
+                      }`}>
+                        {doc.checked && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <div>
+                        <div className={`text-sm font-semibold ${doc.checked ? 'line-through text-[#9E8E7E]' : 'text-[#2C241E]'}`}>{doc.name}</div>
+                        <div className="mt-1 text-[11px]">
+                          <span className={`font-semibold px-1.5 py-0.5 rounded ${
+                            doc.urgency === 'high' ? 'bg-rose-100 text-rose-700' :
+                            doc.urgency === 'medium' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {doc.due}
+                          </span>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              </section>
 
-            </div>
-          </section>
+              {/* 換匯財務 */}
+              <section className="mb-6">
+                <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
+                  <span className="text-xl mr-2">💰</span> 換匯與財務注意事項
+                </h2>
+                <div className={`bg-white border border-[#EBDCCF] rounded-2xl p-4 shadow-sm ${isGenerating ? 'opacity-50 pointer-events-none transition-all' : 'transition-all'}`}>
+                  {finance && (
+                    <>
+                      <div className="flex items-center justify-between mb-3 border-b border-[#F2E8DE] pb-2">
+                        <span className="text-sm font-bold text-[#2C241E]">{finance.currency}</span>
+                        <span className="text-xs text-[#8A624A] bg-[#F4EDE5] px-2 py-1 rounded-md">{finance.rate}</span>
+                      </div>
+                      <ul className="space-y-2">
+                        {finance.tips.map((tip, idx) => (
+                          <li key={idx} className="text-sm text-[#7D7063] flex items-start">
+                            <span className="text-[#C0603A] mr-2">•</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              </section>
+
+              {/* GEM 旅遊大師 */}
+              <section>
+                <h2 className="text-sm font-bold text-[#2C241E] mb-3 flex items-center">
+                  <span className="text-xl mr-2">✨</span> 專屬旅遊規劃：GEM 旅遊大師
+                </h2>
+                <div className="bg-gradient-to-br from-[#FAF6F0] to-[#F2E8DE] border border-[#E8DACD] rounded-2xl p-5">
+                  
+                  {/* 動態生成的每日行程 */}
+                  <div>
+                    {isGenerating ? (
+                      <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                        <div className="w-8 h-8 border-4 border-[#EBDCCF] border-t-[#C0603A] rounded-full animate-spin"></div>
+                        <div className="text-sm font-bold text-[#C0603A] animate-pulse">
+                          ✨ GEM 旅遊大師正在為您即時分析並生成「{activeTrip.destination}」的簽證、財務與專屬行程...
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <h3 className="text-xs font-bold text-[#8A624A] mb-4 bg-[#F4EDE5] inline-block px-3 py-1.5 rounded-full border border-[#E0D2C3]">
+                          為妳客製的 {activeTrip.days} 天深度行程
+                        </h3>
+                        <div className="relative border-l-2 border-[#EBDCCF] ml-3 pl-5 space-y-6">
+                          {itinerary.map((item, index) => (
+                            <div key={index} className="relative">
+                              <div className="absolute -left-[27px] top-0.5 w-3.5 h-3.5 bg-[#C0603A] rounded-full ring-4 ring-[#FAF6F0]"></div>
+                              <div className="text-xs font-bold text-[#C0603A] mb-0.5 tracking-wider uppercase">Day {item.day}</div>
+                              <div className="text-sm font-bold text-[#2C241E] mb-2">{item.title}</div>
+                              
+                              {/* 帶有時間軸的排程清單 */}
+                              <div className="space-y-1.5 mb-3">
+                                {item.schedule.map((slot, idx) => (
+                                  <div key={idx} className="flex items-start text-xs">
+                                    <span className="font-bold text-[#E87A5D] w-12 shrink-0">{slot.time}</span>
+                                    <span className="text-[#6F6052] leading-relaxed">{slot.activity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* 新增：住宿、交通、美食詳細情報卡 */}
+                              <div className="bg-white rounded-xl p-3 space-y-2 border border-[#EBDCCF] shadow-sm text-[11px]">
+                                <div className="flex items-start">
+                                  <span className="mr-2 mt-0.5 text-sm">🏨</span>
+                                  <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">住宿建議:</strong>{item.hotel}</span>
+                                </div>
+                                <div className="flex items-start border-t border-[#F2E8DE] pt-2">
+                                  <span className="mr-2 mt-0.5 text-sm">🚇</span>
+                                  <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">交通動線:</strong>{item.transport}</span>
+                                </div>
+                                <div className="flex items-start border-t border-[#F2E8DE] pt-2">
+                                  <span className="mr-2 mt-0.5 text-sm">🍽️</span>
+                                  <span className="text-[#6F6052] leading-relaxed"><strong className="text-[#8A624A] mr-1">浪漫美饌:</strong>{item.dining}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </section>
+            </>
+          )}
 
         </div>
       );
